@@ -12,6 +12,9 @@ import java.util.Random;
 public class GUI implements ActionListener {
 
     Random random = new Random();
+
+    private JLabel timeoutBetween;
+    private JTextField timeoutTimer;
     private JLabel succes;
     private JFrame frame;
     private JPanel panel;
@@ -20,12 +23,12 @@ public class GUI implements ActionListener {
     private JButton button;
     private JTextField buttonsTextField;
     private JTextField pocetTextArea;
-    int clicked = 0;
+    int timerTime = 0;
 
     public GUI() {
         frame = new JFrame();
         panel = new JPanel();
-        frame.setSize(350, 200);
+        frame.setSize(640, 480);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(panel);
         frame.setLocationRelativeTo(null);
@@ -37,7 +40,7 @@ public class GUI implements ActionListener {
 
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
 
-        buttonsLabel = new JLabel("Buttony na které klikám.Zadávat bez mezery '1245'");
+        buttonsLabel = new JLabel("Buttons");
         buttonsLabel.setBounds(10, 20, 80, 25);
         panel.add(buttonsLabel);
 
@@ -45,7 +48,7 @@ public class GUI implements ActionListener {
         buttonsTextField.setBounds(100, 20, 165, 25);
         panel.add(buttonsTextField);
 
-        pocetLabel = new JLabel("Počet kliků. Zadávat s mezerou '20 40'");
+        pocetLabel = new JLabel("Clics");
         pocetLabel.setBounds(10, 50, 80, 25);
         panel.add(pocetLabel);
 
@@ -53,13 +56,21 @@ public class GUI implements ActionListener {
         pocetTextArea.setBounds(100, 50, 165, 25);
         panel.add(pocetTextArea);
 
-        button = new JButton("StartBoTTa");
-        button.setBounds(10, 80, 80, 25);
+        timeoutBetween = new JLabel("ms");
+        timeoutBetween.setBounds(10, 80, 80, 25);
+        panel.add(timeoutBetween);
+
+        timeoutTimer = new JTextField(20);
+        timeoutTimer.setBounds(100, 80, 165, 25);
+        panel.add(timeoutTimer);
+
+        button = new JButton("Start");
+        button.setBounds(10, 110, 80, 25);
         button.addActionListener(this);
         panel.add(button);
 
         succes = new JLabel("");
-        succes.setBounds(10, 110, 300, 25);;
+        succes.setBounds(10, 140, 300, 25);;
         panel.add(succes);
 
         frame.setVisible(true);
@@ -75,6 +86,7 @@ public class GUI implements ActionListener {
         String[] polePismen = pocetTextArea.getText().split(" ");
         char[] characters = buttonsTextField.getText().toCharArray();
         succes.setText("Procesuji.");
+        timerTime=Integer.parseInt(timeoutTimer.getText());
         if (polePismen.length==characters.length) {
             RobotWriter robotWriter = new RobotWriter();
             robotWriter.processButtonsWithTimes(characters,polePismen);
@@ -131,44 +143,55 @@ public class GUI implements ActionListener {
             int countOfTimesInWorkload=0;
             int whenStopAfk=0;
             boolean notSet=true;
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             for (int i = 0; i < pocty.length; i++) {
                 for (int j = 0; j < Integer.parseInt(pocty[i]); j++) {
                     valuesOfTimes.add(getDefinedRandomDelay());
                     wholeTimesOfWorkValue+=valuesOfTimes.get(countOftimes);
-                    if (notSet&&(wholeTimesOfWorkValue<=300000)){
+                    System.out.println("wholeTimesOfWorkValue="+wholeTimesOfWorkValue);
+                    if (notSet&&(wholeTimesOfWorkValue>=300000)){
                         whenStopAfk=countOftimes+random.nextInt(10);
                         notSet=false;
                     }
-                            countOftimes++;
+                    countOftimes++;
                 }
             }
             for (int i = 0; i < pocty.length; i++) {
                 for (int j = 0; j < Integer.parseInt(pocty[i]); j++) {
                     char c = chars[i];
-                    if (countOfTimesInWorkload==whenStopAfk){
+                    if ((countOfTimesInWorkload==whenStopAfk)&&countOfTimesInWorkload!=0){
+                        try {
+                            Thread.sleep(valuesOfTimes.get(countOfTimesInWorkload));
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                         switch (random.nextInt(3)+1){
                             case 1:
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyPress(Character.toUpperCase("a".toCharArray()[0]));
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyRelease(Character.toUpperCase("a".toCharArray()[0]));
                                 break;
                                 case 2:
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyPress(Character.toUpperCase("w".toCharArray()[0]));
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyRelease(Character.toUpperCase("w".toCharArray()[0]));
                                 break;
                                 case 3:
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyPress(Character.toUpperCase("d".toCharArray()[0]));
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyRelease(Character.toUpperCase("d".toCharArray()[0]));
                                 break;
                                 case 4:
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyPress(KeyEvent.VK_SPACE);
-                                robot.delay(getDefinedRandomDelayBetween());
+                                robot.setAutoDelay(getDefinedRandomDelayBetween());
                                 robot.keyRelease(KeyEvent.VK_SPACE);
                                 break;
                         }
@@ -178,24 +201,24 @@ public class GUI implements ActionListener {
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    robot.delay(getDefinedRandomDelayBetween());
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
                     if (Character.isUpperCase(c)) {
                         robot.keyPress(KeyEvent.VK_SHIFT);
                     }
-                    robot.delay(getDefinedRandomDelayBetween());
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
                     robot.keyPress(Character.toUpperCase(c));
-                    robot.delay(getDefinedRandomDelayBetween());
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
                     robot.keyRelease(Character.toUpperCase(c));
-                    robot.delay(getDefinedRandomDelayBetween());
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
                     if (Character.isUpperCase(c)) {
                         robot.keyRelease(KeyEvent.VK_SHIFT);
                     }
+                    countOfTimesInWorkload++;
                 }
-                countOfTimesInWorkload++;
             }
         }
         private int getDefinedRandomDelay(){
-            return random.nextInt(2000)+5000;
+            return random.nextInt(1000)+timerTime;
         }
 
         private int getDefinedRandomDelayBetween(){
