@@ -21,9 +21,13 @@ public class GUI implements ActionListener {
     private JLabel buttonsLabel;
     private JLabel pocetLabel;
     private JButton button;
+
+    private JButton button2;
     private JTextField buttonsTextField;
     private JTextField pocetTextArea;
     int timerTime = 0;
+    private Thread workerThread;
+
 
     public GUI() {
         frame = new JFrame();
@@ -69,6 +73,17 @@ public class GUI implements ActionListener {
         button.addActionListener(this);
         panel.add(button);
 
+        button2 = new JButton("Stop");
+        button2.setBounds(90, 110, 80, 25);
+        button2.addActionListener(e -> {
+            if (workerThread != null) {
+                workerThread.interrupt();
+                workerThread = null; // Vyčistíme odkaz na vlákno
+                succes.setText("Proces byl zastaven.");
+            }
+        });
+        panel.add(button2);
+
         succes = new JLabel("");
         succes.setBounds(10, 140, 300, 25);;
         panel.add(succes);
@@ -76,6 +91,7 @@ public class GUI implements ActionListener {
         frame.setVisible(true);
 
     }
+
 
     public static void main(String[] args) {
         new GUI();
@@ -88,9 +104,12 @@ public class GUI implements ActionListener {
         succes.setText("Procesuji.");
         timerTime=Integer.parseInt(timeoutTimer.getText());
         if (polePismen.length==characters.length) {
-            RobotWriter robotWriter = new RobotWriter();
-            robotWriter.processButtonsWithTimes(characters,polePismen);
-            succes.setText("Cyklus dokončen");
+            workerThread = new Thread(() -> {
+                RobotWriter robotWriter = new RobotWriter();
+                robotWriter.processButtonsWithTimes(characters, polePismen);
+                succes.setText("Cyklus dokončen");
+            });
+            workerThread.start();
         }else {
             succes.setText("Počet písmen a počet úhozů nesouhlasí. Prosím zadejte validní počet písmen a úhozů.");
         }
@@ -135,6 +154,8 @@ public class GUI implements ActionListener {
             robot.keyPress(KeyEvent.VK_TAB);
             robot.keyRelease(KeyEvent.VK_TAB);
         }
+
+
 
         private void processButtonsWithTimes(char[] chars,String[] pocty) {
             List<Integer> valuesOfTimes= new ArrayList<>();
