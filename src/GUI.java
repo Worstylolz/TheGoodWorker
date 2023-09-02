@@ -9,8 +9,6 @@ import java.awt.event.KeyEvent;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 public class GUI implements ActionListener {
@@ -222,60 +220,64 @@ public class GUI implements ActionListener {
             }
         }
 
-
+        /**
+         * Dostane písnema na které má kliknou + počty kliků. Může být více písmen.
+         * Metoda pustí cyklus, který se řídí počtem písmen. Pole charu + kliku bude v cyklu používat stejný index.
+         * @param chars
+         * @param pocty
+         */
         private void disenchanterMethod(char[] chars, String[] pocty) {
-            List<Integer> valuesOfTimes = new ArrayList<>();
-            int countOftimes = 0;
-            int wholeTimesOfWorkValue = 0;
-            int countOfTimesInWorkload = 0;
-            int whenStopAfk = 0;
-            boolean notSet = true;
-            sleeper(5000);
-            for (String s : pocty) {
-                for (int j = 0; j < Integer.parseInt(s); j++) {
-                    valuesOfTimes.add(getDefinedRandomDelay());
-                    wholeTimesOfWorkValue += valuesOfTimes.get(countOftimes);
-                    logToConsole("wholeTimesOfWorkValue=" + wholeTimesOfWorkValue);
-                    if (notSet && (wholeTimesOfWorkValue >= 300000)) {
-                        whenStopAfk = countOftimes + random.nextInt(10);
-                        notSet = false;
-                    }
-                    countOftimes++;
-                }
-            }
-            for (int i = 0; i < pocty.length; i++) {
-                for (int j = 0; j < Integer.parseInt(pocty[i]); j++) {
-                    char c = chars[i];
-                    if ((countOfTimesInWorkload == whenStopAfk) && countOfTimesInWorkload != 0) {
-                        sleeper(valuesOfTimes.get(countOfTimesInWorkload));
+
+            for (int i = 0; i < chars.length; i++) {
+                int aktualPoctyInt=Integer.parseInt(pocty[i]);
+                int wholeTimeOfcliclicks=0;
+                //nastavena hodnota mimo index z důvodu nepotřebného spuštění pokud nenastane.
+                int nextAfkSession = aktualPoctyInt+1;
+                logToConsole("Pouštím novou session, kde písmeno je char="+chars[i]+" a počet úhozů na tento char="+pocty[i]);
+                for (int j = 0; j < aktualPoctyInt; j++) {
+                    int actualClickTime=getDefinedRandomDelay();
+                    Instant actualTimeInstant=Instant.now();
+                    logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(actualClickTime)+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(actualClickTime)));
+                    wholeTimeOfcliclicks+=actualClickTime;
+                    sleeper(actualClickTime);
+                    if (j==nextAfkSession){
                         antiAfkMoveOnSide();
                     }
-                    sleeper(valuesOfTimes.get(countOfTimesInWorkload));
                     robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    clickOnSomeButtonWithRandomTimes(c);
-                    countOfTimesInWorkload++;
+                    logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
+                    clickOnSomeButtonWithRandomTimes(chars[i]);
+                    if (wholeTimeOfcliclicks>=240000){
+                        wholeTimeOfcliclicks=0;
+                        int createdNextTimeOfAfk=j + random.nextInt(10);
+                        nextAfkSession=(createdNextTimeOfAfk)<aktualPoctyInt?createdNextTimeOfAfk:aktualPoctyInt-1;
+                    }
                 }
             }
         }
 
         private void afkWorkerForCrafting(char[] chars, String[] pocty){
-            List<Integer> valuesOfTimes = new ArrayList<>();
             for (int i = 0; i < chars.length; i++) {
-                for (int j = 0; j < pocty.length; j++) {
-                    for (int k = 0; k < Integer.parseInt(pocty[j]); k++) {
-                        valuesOfTimes.add(getDefinedRandomDelay(300000));
+                int wholeTimeOfcliclicks=0;
+                int aktualPoctyInt=Integer.parseInt(pocty[i]);
+                int nextAfkSession = aktualPoctyInt+1;
+                for (int k = 0; k < Integer.parseInt(pocty[i]); k++) {
+                        int actualClickTime=getDefinedRandomDelay(300000);
+                    Instant actualTimeInstant=Instant.now();
+                    logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(actualClickTime)+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(actualClickTime)));
+                    wholeTimeOfcliclicks+=actualClickTime;
+                    sleeper(actualClickTime);
+                    if (k==nextAfkSession){
+                        antiAfkMoveOnSide();
                     }
-                }
-            }
-            logToConsole("Hodnoty časů na spuštění:\n"+valuesOfTimes);
-            for (int i = 0; i < valuesOfTimes.size(); i++) {
-//                succes.setText(returnActualTime()+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(valuesOfTimes.get(i)));
-                Instant actualTimeInstant=Instant.now();
-                logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(valuesOfTimes.get(i))+"\nNásledující klik bude proveden v:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(valuesOfTimes.get(i))));
-                sleeper(valuesOfTimes.get(i));
-                logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
-//                succes.setText(returnActualTime()+"Provádím klik.");
-                clickOnSomeButtonWithRandomTimes(chars[i]);
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
+                    clickOnSomeButtonWithRandomTimes(chars[i]);
+                    if (wholeTimeOfcliclicks>=900000){
+                        wholeTimeOfcliclicks=0;
+                        int createdNextTimeOfAfk=k + 1;
+                        nextAfkSession=(createdNextTimeOfAfk)<aktualPoctyInt?createdNextTimeOfAfk:aktualPoctyInt-1;
+                    }
+                    }
             }
         }
 
@@ -289,13 +291,16 @@ public class GUI implements ActionListener {
             // milliseconds to seconds
             long seconds = (milliseconds / 1000) % 60;
 
+            long millisecondsAfterCalculate = milliseconds % 1000;
+
             // Print the output
-            return minutes + " minutes and "
-                    + seconds + " seconds.";
+            return minutes + " minutes "
+                    + seconds + " seconds "
+                    + millisecondsAfterCalculate + " milliseconds.";
         }
 
         private String returnFormatedDateFromInstant(Instant instant){
-            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").withZone(ZoneId.systemDefault());
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSSS").withZone(ZoneId.systemDefault());
             return dtf.format(instant)+":";
         }
 
@@ -324,6 +329,7 @@ public class GUI implements ActionListener {
         }
 
         private void antiAfkMoveOnSide() {
+            logToConsole("Provádím antiAFK session");
             switch (random.nextInt(4) + 1) {
                 case 1 -> {
                     robot.setAutoDelay(getDefinedRandomDelayBetween());
@@ -350,6 +356,7 @@ public class GUI implements ActionListener {
                     robot.keyRelease(KeyEvent.VK_SPACE);
                 }
             }
+            sleeper(5000);
         }
     }
 }
