@@ -1,10 +1,14 @@
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -25,8 +29,16 @@ public class GUI implements ActionListener {
     private JButton button2;
     private JTextField buttonsTextField;
     private JTextField pocetTextArea;
+    private JCheckBox checkBox; // Added checkbox
+    private JCheckBox checkBoxShowConsole; // Added checkbox na konzoli
+
     int timerTime = 0;
     private Thread workerThread;
+
+    private JTextArea consoleTextArea;
+    private JScrollPane scrollPane;
+
+
 
 
     public GUI() {
@@ -40,8 +52,6 @@ public class GUI implements ActionListener {
         panel.setLayout(null);
 
         frame.setTitle("The good worker");
-//            frame.pack();
-
         panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
 
         buttonsLabel = new JLabel("Buttons");
@@ -84,8 +94,41 @@ public class GUI implements ActionListener {
         });
         panel.add(button2);
 
+
+        checkBox = new JCheckBox("DisenchanterMode");
+        checkBox.setBounds(180, 110, 100, 25); // Set the checkbox position
+        panel.add(checkBox);
+
+        checkBoxShowConsole = new JCheckBox("console");
+        checkBoxShowConsole.setBounds(10, 140, 100, 25); // Set the checkbox position
+        panel.add(checkBoxShowConsole);
+        consoleTextArea = new JTextArea();
+        consoleTextArea.setEditable(false);
+        consoleTextArea.setBounds(10, 170, 600, 200);
+        consoleTextArea.setVisible(false);
+        consoleTextArea.setWrapStyleWord(true);
+        consoleTextArea.setLineWrap(true);
+        consoleTextArea.getScrollableTracksViewportWidth();
+        DefaultCaret caret = (DefaultCaret) consoleTextArea.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+        consoleTextArea.setCaret(caret);
+        panel.add(consoleTextArea);
+
+        scrollPane = new JScrollPane(consoleTextArea); // Vytvoření JScrollPane kolem JTextArea
+        scrollPane.setBounds(10, 170, 600, 200); // Nastavte umístění JScrollPane
+        scrollPane.setVisible(false); // Skryj JScrollPane na začátku
+        panel.add(scrollPane);
+
+        checkBoxShowConsole.addActionListener(e -> {
+            boolean consoleVisible = checkBoxShowConsole.isSelected();
+            consoleTextArea.setVisible(consoleVisible);
+            scrollPane.setVisible(true);
+            consoleTextArea.revalidate();
+            consoleTextArea.repaint();
+        });
+
         succes = new JLabel("");
-        succes.setBounds(10, 140, 300, 25);;
+        succes.setBounds(110, 140, 600, 25);;
         panel.add(succes);
 
         frame.setVisible(true);
@@ -97,21 +140,37 @@ public class GUI implements ActionListener {
         new GUI();
     }
 
+    private void logToConsole(String message) {
+        consoleTextArea.append(message + "\n");
+//        consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
+    }
+
+
+
     @Override
     public void actionPerformed(ActionEvent e) {
-        String[] polePismen = pocetTextArea.getText().split(" ");
-        char[] characters = buttonsTextField.getText().toCharArray();
-        succes.setText("Procesuji.");
-        timerTime=Integer.parseInt(timeoutTimer.getText());
-        if (polePismen.length==characters.length) {
-            workerThread = new Thread(() -> {
-                RobotWriter robotWriter = new RobotWriter();
-                robotWriter.processButtonsWithTimes(characters, polePismen);
-                succes.setText("Cyklus dokončen");
-            });
-            workerThread.start();
-        }else {
-            succes.setText("Počet písmen a počet úhozů nesouhlasí. Prosím zadejte validní počet písmen a úhozů.");
+        try {
+            consoleTextArea.revalidate();
+            String[] polePismen = pocetTextArea.getText().split(" ");
+            char[] characters = buttonsTextField.getText().toCharArray();
+            succes.setText("Procesuji.");
+            timerTime = Integer.parseInt(timeoutTimer.getText());
+            RobotWriter robotWriter = new RobotWriter();
+            if (polePismen.length == characters.length) {
+                workerThread = new Thread(() -> {
+                    if (checkBox.isSelected()) {
+                        robotWriter.disenchanterMethod(characters, polePismen);
+                    } else {
+                        robotWriter.afkWorkerForCrafting(characters, polePismen);
+                    }
+                    succes.setText("Cyklus dokončen");
+                });
+                workerThread.start();
+            } else {
+                succes.setText("Počet písmen a počet úhozů nesouhlasí. Prosím zadejte validní počet písmen a úhozů.");
+            }
+        } catch (Exception ex) {
+            logToConsole(String.valueOf(ex));
         }
     }
 
@@ -155,28 +214,31 @@ public class GUI implements ActionListener {
             robot.keyRelease(KeyEvent.VK_TAB);
         }
 
-
-
-        private void processButtonsWithTimes(char[] chars,String[] pocty) {
-            List<Integer> valuesOfTimes= new ArrayList<>();
-            int countOftimes=0;
-            int wholeTimesOfWorkValue=0;
-            int countOfTimesInWorkload=0;
-            int whenStopAfk=0;
-            boolean notSet=true;
+        private void sleeper(int howLong){
             try {
-                Thread.sleep(5000);
+                Thread.sleep(howLong);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            for (int i = 0; i < pocty.length; i++) {
-                for (int j = 0; j < Integer.parseInt(pocty[i]); j++) {
+        }
+
+
+        private void disenchanterMethod(char[] chars, String[] pocty) {
+            List<Integer> valuesOfTimes = new ArrayList<>();
+            int countOftimes = 0;
+            int wholeTimesOfWorkValue = 0;
+            int countOfTimesInWorkload = 0;
+            int whenStopAfk = 0;
+            boolean notSet = true;
+            sleeper(5000);
+            for (String s : pocty) {
+                for (int j = 0; j < Integer.parseInt(s); j++) {
                     valuesOfTimes.add(getDefinedRandomDelay());
-                    wholeTimesOfWorkValue+=valuesOfTimes.get(countOftimes);
-                    System.out.println("wholeTimesOfWorkValue="+wholeTimesOfWorkValue);
-                    if (notSet&&(wholeTimesOfWorkValue>=300000)){
-                        whenStopAfk=countOftimes+random.nextInt(10);
-                        notSet=false;
+                    wholeTimesOfWorkValue += valuesOfTimes.get(countOftimes);
+                    logToConsole("wholeTimesOfWorkValue=" + wholeTimesOfWorkValue);
+                    if (notSet && (wholeTimesOfWorkValue >= 300000)) {
+                        whenStopAfk = countOftimes + random.nextInt(10);
+                        notSet = false;
                     }
                     countOftimes++;
                 }
@@ -184,66 +246,110 @@ public class GUI implements ActionListener {
             for (int i = 0; i < pocty.length; i++) {
                 for (int j = 0; j < Integer.parseInt(pocty[i]); j++) {
                     char c = chars[i];
-                    if ((countOfTimesInWorkload==whenStopAfk)&&countOfTimesInWorkload!=0){
-                        try {
-                            Thread.sleep(valuesOfTimes.get(countOfTimesInWorkload));
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                        switch (random.nextInt(3)+1){
-                            case 1:
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyPress(Character.toUpperCase("a".toCharArray()[0]));
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyRelease(Character.toUpperCase("a".toCharArray()[0]));
-                                break;
-                                case 2:
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyPress(Character.toUpperCase("w".toCharArray()[0]));
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyRelease(Character.toUpperCase("w".toCharArray()[0]));
-                                break;
-                                case 3:
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyPress(Character.toUpperCase("d".toCharArray()[0]));
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyRelease(Character.toUpperCase("d".toCharArray()[0]));
-                                break;
-                                case 4:
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyPress(KeyEvent.VK_SPACE);
-                                robot.setAutoDelay(getDefinedRandomDelayBetween());
-                                robot.keyRelease(KeyEvent.VK_SPACE);
-                                break;
-                        }
+                    if ((countOfTimesInWorkload == whenStopAfk) && countOfTimesInWorkload != 0) {
+                        sleeper(valuesOfTimes.get(countOfTimesInWorkload));
+                        antiAfkMoveOnSide();
                     }
-                    try {
-                        Thread.sleep(valuesOfTimes.get(countOfTimesInWorkload));
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
+                    sleeper(valuesOfTimes.get(countOfTimesInWorkload));
                     robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    if (Character.isUpperCase(c)) {
-                        robot.keyPress(KeyEvent.VK_SHIFT);
-                    }
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyPress(Character.toUpperCase(c));
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyRelease(Character.toUpperCase(c));
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    if (Character.isUpperCase(c)) {
-                        robot.keyRelease(KeyEvent.VK_SHIFT);
-                    }
+                    clickOnSomeButtonWithRandomTimes(c);
                     countOfTimesInWorkload++;
                 }
             }
         }
-        private int getDefinedRandomDelay(){
-            return random.nextInt(1000)+timerTime;
+
+        private void afkWorkerForCrafting(char[] chars, String[] pocty){
+            List<Integer> valuesOfTimes = new ArrayList<>();
+            for (int i = 0; i < chars.length; i++) {
+                for (int j = 0; j < pocty.length; j++) {
+                    for (int k = 0; k < Integer.parseInt(pocty[j]); k++) {
+                        valuesOfTimes.add(getDefinedRandomDelay(300000));
+                    }
+                }
+            }
+            logToConsole("Hodnoty časů na spuštění:\n"+valuesOfTimes);
+            for (int i = 0; i < valuesOfTimes.size(); i++) {
+//                succes.setText(returnActualTime()+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(valuesOfTimes.get(i)));
+                Instant actualTimeInstant=Instant.now();
+                logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(valuesOfTimes.get(i))+"\nNásledující klik bude proveden v:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(valuesOfTimes.get(i))));
+                sleeper(valuesOfTimes.get(i));
+                logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
+//                succes.setText(returnActualTime()+"Provádím klik.");
+                clickOnSomeButtonWithRandomTimes(chars[i]);
+            }
         }
 
-        private int getDefinedRandomDelayBetween(){
-            return random.nextInt(50)+50;
+        private String casNaVraceni(int milliseconds){
+
+            // formula for conversion for
+            // milliseconds to minutes.
+            long minutes = (milliseconds / 1000) / 60;
+
+            // formula for conversion for
+            // milliseconds to seconds
+            long seconds = (milliseconds / 1000) % 60;
+
+            // Print the output
+            return minutes + " minutes and "
+                    + seconds + " seconds.";
+        }
+
+        private String returnFormatedDateFromInstant(Instant instant){
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").withZone(ZoneId.systemDefault());
+            return dtf.format(instant)+":";
+        }
+
+        private void clickOnSomeButtonWithRandomTimes(Character c){
+            if (Character.isUpperCase(c)) {
+                robot.keyPress(KeyEvent.VK_SHIFT);
+            }
+            robot.setAutoDelay(getDefinedRandomDelayBetween());
+            robot.keyPress(Character.toUpperCase(c));
+            robot.setAutoDelay(getDefinedRandomDelayBetween());
+            robot.keyRelease(Character.toUpperCase(c));
+            robot.setAutoDelay(getDefinedRandomDelayBetween());
+            if (Character.isUpperCase(c)) {
+                robot.keyRelease(KeyEvent.VK_SHIFT);
+            }
+        }
+        private int getDefinedRandomDelay() {
+            return random.nextInt(1000) + timerTime;
+        }
+        private int getDefinedRandomDelay(Integer definedtimer) {
+            return random.nextInt(definedtimer) + timerTime;
+        }
+
+        private int getDefinedRandomDelayBetween() {
+            return random.nextInt(50) + 50;
+        }
+
+        private void antiAfkMoveOnSide() {
+            switch (random.nextInt(4) + 1) {
+                case 1 -> {
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyPress(Character.toUpperCase("a".toCharArray()[0]));
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyRelease(Character.toUpperCase("a".toCharArray()[0]));
+                }
+                case 2 -> {
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyPress(Character.toUpperCase("w".toCharArray()[0]));
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyRelease(Character.toUpperCase("w".toCharArray()[0]));
+                }
+                case 3 -> {
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyPress(Character.toUpperCase("d".toCharArray()[0]));
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyRelease(Character.toUpperCase("d".toCharArray()[0]));
+                }
+                case 4 -> {
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyPress(KeyEvent.VK_SPACE);
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    robot.keyRelease(KeyEvent.VK_SPACE);
+                }
+            }
         }
     }
 }
