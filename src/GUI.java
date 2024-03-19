@@ -9,6 +9,8 @@ import java.awt.event.KeyEvent;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class GUI implements ActionListener {
@@ -40,6 +42,7 @@ public class GUI implements ActionListener {
 
 
     public GUI() {
+        //vytvoření GUI
         frame = new JFrame();
         panel = new JPanel();
         frame.setSize(640, 480);
@@ -138,6 +141,10 @@ public class GUI implements ActionListener {
         new GUI();
     }
 
+    /**
+     * Vypíše zprávu do console v GUI.
+     * @param message zpráva na vypsání.
+     */
     private void logToConsole(String message) {
         consoleTextArea.append(message + "\n");
 //        consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
@@ -159,7 +166,7 @@ public class GUI implements ActionListener {
                     if (checkBox.isSelected()) {
                         robotWriter.disenchanterMethod(characters, polePismen);
                     } else {
-                        robotWriter.afkWorkerForCrafting(characters, polePismen);
+                        robotWriter.antiAfkCrafting(characters, polePismen);
                     }
                     succes.setText("Cyklus dokončen");
                 });
@@ -221,10 +228,11 @@ public class GUI implements ActionListener {
         }
 
         /**
-         * Dostane písnema na které má kliknou + počty kliků. Může být více písmen.
-         * Metoda pustí cyklus, který se řídí počtem písmen. Pole charu + kliku bude v cyklu používat stejný index.
-         * @param chars
-         * @param pocty
+         * Dostane písnema na které má kliknou + počty kliků. Může být více písmen. Čas mezi kliky je specifikovaný v inputu ms
+         * Metoda pustí cyklus, který se řídí počtem písmen. Pole charu + kliku bude v cyklu používat stejný index. index pole pocty= index pole chars. Tato skutečnost vždy musí být dodržená.
+         * Jedná se disenchanting ve hre WoW.
+         * @param chars písmena na kliknutí
+         * @param pocty počty kliknutí
          */
         private void disenchanterMethod(char[] chars, String[] pocty) {
 
@@ -237,7 +245,7 @@ public class GUI implements ActionListener {
                 for (int j = 0; j < aktualPoctyInt; j++) {
                     int actualClickTime=getDefinedRandomDelay();
                     Instant actualTimeInstant=Instant.now();
-                    logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(actualClickTime)+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(actualClickTime)));
+                    logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+ prettyPrintTimes(actualClickTime)+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(actualClickTime)));
                     wholeTimeOfcliclicks+=actualClickTime;
                     sleeper(actualClickTime);
                     if (j==nextAfkSession){
@@ -255,33 +263,50 @@ public class GUI implements ActionListener {
             }
         }
 
-        private void afkWorkerForCrafting(char[] chars, String[] pocty){
+        /**Metoda, který nám dle času v inputu ms spočte dle Počet*ms celkový čas craftení všech itemů. Následně vždy jednou mezi 22min+náhodný čas z 300 sekund provede antiAfkMetodu.
+         * indexy z chars jsou navázané na indexy z počtu stejně jako u disenchant metody. index pole pocty= index pole chars. Tato skutečnost vždy musí být dodržená.
+         * @param chars pole tlačítek, na které má kliknout.
+         * @param pocty pole počtů, kolikrát má kliknout
+         */
+        public void antiAfkCrafting(char[] chars, String[] pocty){
             for (int i = 0; i < chars.length; i++) {
-                int wholeTimeOfcliclicks=0;
-                int aktualPoctyInt=Integer.parseInt(pocty[i]);
-                int nextAfkSession = aktualPoctyInt+1;
-                for (int k = 0; k < Integer.parseInt(pocty[i]); k++) {
-                        int actualClickTime=getDefinedRandomDelay(300000);
+                List<Long> timesToWait=new ArrayList<>();
+                int aktualPoctyInt = Integer.parseInt(pocty[i]);
+                long wholeTimeFromPocty=aktualPoctyInt*timerTime;
+                long timesToWaitRaw=0;
+                while (wholeTimeFromPocty>timesToWaitRaw){
+                    long increasedTime=(1320000+random.nextInt(300000));
+                    timesToWaitRaw+=increasedTime;
+                    timesToWait.add(increasedTime);
+                }
+                Instant timeForVypis=Instant.now();
+                for (long casKliku :
+                        timesToWait) {
+                    timeForVypis=timeForVypis.plusMillis(Math.toIntExact(casKliku));
+                    logToConsole(prettyPrintTimes(Math.toIntExact(casKliku))+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(timeForVypis));
+                }
+                logToConsole("Celkový počet indexů je:"+timesToWait.size());
+                logToConsole("Celý proces bude trvat:"+ prettyPrintTimes(Math.toIntExact(timesToWaitRaw))+"\nBude dookončen:"+returnFormatedDateFromInstant(Instant.now().plusMillis(timesToWaitRaw))+"\nCelkový počet indexů je:"+timesToWait.size());
+                for (int t = 0; t < timesToWait.size(); t++) {
                     Instant actualTimeInstant=Instant.now();
-                    logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+casNaVraceni(actualClickTime)+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(actualClickTime)));
-                    wholeTimeOfcliclicks+=actualClickTime;
-                    sleeper(actualClickTime);
-                    if (k==nextAfkSession){
-                        antiAfkMoveOnSide();
-                    }
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+t+"/"+timesToWait.size()+"\nBudu čekat="+ prettyPrintTimes(Math.toIntExact(timesToWait.get(t)))+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(Math.toIntExact(timesToWait.get(t)))));
+                    sleeper(Math.toIntExact(timesToWait.get(t)));
+                    antiAfkMoveOnSide();
                     logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
+                    robot.setAutoDelay(getDefinedRandomDelayBetween());
                     clickOnSomeButtonWithRandomTimes(chars[i]);
-                    if (wholeTimeOfcliclicks>=900000){
-                        wholeTimeOfcliclicks=0;
-                        int createdNextTimeOfAfk=k + 1;
-                        nextAfkSession=(createdNextTimeOfAfk)<aktualPoctyInt?createdNextTimeOfAfk:aktualPoctyInt-1;
                     }
-                    }
+                }
+            logToConsole("Proces je dokončen!");
             }
-        }
 
-        private String casNaVraceni(int milliseconds){
+
+        /**
+         *
+         * @param milliseconds int milisekund.
+         * @return String s výpisem času.
+         */
+        private String prettyPrintTimes(int milliseconds){
 
             // formula for conversion for
             // milliseconds to minutes.
@@ -299,11 +324,16 @@ public class GUI implements ActionListener {
                     + millisecondsAfterCalculate + " milliseconds.";
         }
 
+        //název asi mluví za vše
         private String returnFormatedDateFromInstant(Instant instant){
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSSS").withZone(ZoneId.systemDefault());
             return dtf.format(instant)+":";
         }
 
+        /**
+         * Kliknutí na tlačítko s rozdílnými časy, aby čas nebyl stejný a nebylo tak lehce rozeznatelné, že se jedná o program.
+         * @param c tlačítko, na které budu chtít kliknout.
+         */
         private void clickOnSomeButtonWithRandomTimes(Character c){
             if (Character.isUpperCase(c)) {
                 robot.keyPress(KeyEvent.VK_SHIFT);
@@ -317,6 +347,11 @@ public class GUI implements ActionListener {
                 robot.keyRelease(KeyEvent.VK_SHIFT);
             }
         }
+
+        /**
+         *
+         * @return náhodný čas + ms time nastavený v input ms
+         */
         private int getDefinedRandomDelay() {
             return random.nextInt(1000) + timerTime;
         }
@@ -324,10 +359,18 @@ public class GUI implements ActionListener {
             return random.nextInt(definedtimer) + timerTime;
         }
 
+        /**
+         *
+         * @return náhodný čas na robot autoDelay.
+         */
+
         private int getDefinedRandomDelayBetween() {
             return random.nextInt(50) + 50;
         }
 
+        /**
+         * Metoda provede náhodné pohnutí do stran, nebo stihnutí mezerníku. Tím způsobí, že charakter vypadne ze stavu AFK.
+         */
         private void antiAfkMoveOnSide() {
             logToConsole("Provádím antiAFK session");
             switch (random.nextInt(4) + 1) {
