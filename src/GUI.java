@@ -1,11 +1,7 @@
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
-import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -16,6 +12,10 @@ import java.util.Random;
 public class GUI implements ActionListener {
 
     Random random = new Random();
+
+    public Random getRandom() {
+        return random;
+    }
 
     private JLabel timeoutBetween;
     private JTextField timeoutTimer;
@@ -33,10 +33,16 @@ public class GUI implements ActionListener {
     private JCheckBox checkBoxShowConsole; // Added checkbox na konzoli
 
     int timerTime = 0;
+
+    public int getTimerTime() {
+        return timerTime;
+    }
+
     private Thread workerThread;
 
     private JTextArea consoleTextArea;
     private JScrollPane scrollPane;
+    KeyboardRobot keyboardRobot;
 
 
 
@@ -145,7 +151,7 @@ public class GUI implements ActionListener {
      * Vypíše zprávu do console v GUI.
      * @param message zpráva na vypsání.
      */
-    private void logToConsole(String message) {
+    public void logToConsole(String message) {
         consoleTextArea.append(message + "\n");
 //        consoleTextArea.setCaretPosition(consoleTextArea.getDocument().getLength());
     }
@@ -160,13 +166,13 @@ public class GUI implements ActionListener {
             char[] characters = buttonsTextField.getText().toCharArray();
             succes.setText("Procesuji.");
             timerTime = Integer.parseInt(timeoutTimer.getText());
-            RobotWriter robotWriter = new RobotWriter();
+            keyboardRobot= new KeyboardRobot(this);
             if (polePismen.length == characters.length) {
                 workerThread = new Thread(() -> {
                     if (checkBox.isSelected()) {
-                        robotWriter.disenchanterMethod(characters, polePismen);
+                        disenchanterMethod(characters, polePismen);
                     } else {
-                        robotWriter.antiAfkCrafting(characters, polePismen);
+                        antiAfkCrafting(characters, polePismen);
                     }
                     succes.setText("Cyklus dokončen");
                 });
@@ -179,61 +185,7 @@ public class GUI implements ActionListener {
         }
     }
 
-    public class RobotWriter {
-        Robot robot;
 
-        public RobotWriter() {
-            setRobot();
-        }
-
-        void setRobot() {
-            try {
-                robot = new Robot();
-            } catch (AWTException e) {
-                e.printStackTrace();
-            }
-            robot.setAutoDelay(1000);
-        }
-
-        public void sendKeys() {
-            robot.keyPress(KeyEvent.VK_CONTROL);
-            robot.keyPress(KeyEvent.VK_V);
-            robot.keyRelease(KeyEvent.VK_V);
-            robot.keyRelease(KeyEvent.VK_CONTROL);
-            tab();
-        }
-
-        public void setStringToClipBoard(String string) {
-            StringSelection selection = new StringSelection(string);
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            clipboard.setContents(selection, selection);
-        }
-
-        public void enter() {
-            robot.keyPress(KeyEvent.VK_ENTER);
-            robot.keyRelease(KeyEvent.VK_ENTER);
-        }
-
-        public void tab() {
-            robot.keyPress(KeyEvent.VK_TAB);
-            robot.keyRelease(KeyEvent.VK_TAB);
-        }
-
-        private void sleeper(int howLong){
-            try {
-                Thread.sleep(howLong);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        /**
-         * Dostane písnema na které má kliknou + počty kliků. Může být více písmen. Čas mezi kliky je specifikovaný v inputu ms
-         * Metoda pustí cyklus, který se řídí počtem písmen. Pole charu + kliku bude v cyklu používat stejný index. index pole pocty= index pole chars. Tato skutečnost vždy musí být dodržená.
-         * Jedná se disenchanting ve hre WoW.
-         * @param chars písmena na kliknutí
-         * @param pocty počty kliknutí
-         */
         private void disenchanterMethod(char[] chars, String[] pocty) {
 
             for (int i = 0; i < chars.length; i++) {
@@ -243,17 +195,17 @@ public class GUI implements ActionListener {
                 int nextAfkSession = aktualPoctyInt+1;
                 logToConsole("Pouštím novou session, kde písmeno je char="+chars[i]+" a počet úhozů na tento char="+pocty[i]);
                 for (int j = 0; j < aktualPoctyInt; j++) {
-                    int actualClickTime=getDefinedRandomDelay();
+                    int actualClickTime=keyboardRobot.getDefinedRandomDelay();
                     Instant actualTimeInstant=Instant.now();
                     logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+i+"\nBudu čekat="+ prettyPrintTimes(actualClickTime)+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(actualClickTime)));
                     wholeTimeOfcliclicks+=actualClickTime;
-                    sleeper(actualClickTime);
+                    keyboardRobot.sleeper(actualClickTime);
                     if (j==nextAfkSession){
-                        antiAfkMoveOnSide();
+                        keyboardRobot.antiAfkMoveOnSide();
                     }
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
+                    keyboardRobot.getRobot().setAutoDelay(keyboardRobot.getDefinedRandomDelayBetween());
                     logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
-                    clickOnSomeButtonWithRandomTimes(chars[i]);
+                    keyboardRobot.clickOnSomeButtonWithRandomTimes(chars[i]);
                     if (wholeTimeOfcliclicks>=240000){
                         wholeTimeOfcliclicks=0;
                         int createdNextTimeOfAfk=j + random.nextInt(10);
@@ -290,11 +242,11 @@ public class GUI implements ActionListener {
                 for (int t = 0; t < timesToWait.size(); t++) {
                     Instant actualTimeInstant=Instant.now();
                     logToConsole(returnFormatedDateFromInstant(actualTimeInstant)+"Aktuální index="+t+"/"+timesToWait.size()+"\nBudu čekat="+ prettyPrintTimes(Math.toIntExact(timesToWait.get(t)))+"\nNásledující klik bude proveden po:"+returnFormatedDateFromInstant(actualTimeInstant.plusMillis(Math.toIntExact(timesToWait.get(t)))));
-                    sleeper(Math.toIntExact(timesToWait.get(t)));
-                    antiAfkMoveOnSide();
+                    keyboardRobot.sleeper(Math.toIntExact(timesToWait.get(t)));
+                    keyboardRobot.antiAfkMoveOnSide();
                     logToConsole(returnFormatedDateFromInstant(Instant.now())+"Provádím klik.");
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    clickOnSomeButtonWithRandomTimes(chars[i]);
+                    keyboardRobot.getRobot().setAutoDelay(keyboardRobot.getDefinedRandomDelayBetween());
+                    keyboardRobot.clickOnSomeButtonWithRandomTimes(chars[i]);
                     }
                 }
             logToConsole("Proces je dokončen!");
@@ -324,82 +276,8 @@ public class GUI implements ActionListener {
                     + millisecondsAfterCalculate + " milliseconds.";
         }
 
-        //název asi mluví za vše
         private String returnFormatedDateFromInstant(Instant instant){
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss:SSSS").withZone(ZoneId.systemDefault());
             return dtf.format(instant)+":";
         }
-
-        /**
-         * Kliknutí na tlačítko s rozdílnými časy, aby čas nebyl stejný a nebylo tak lehce rozeznatelné, že se jedná o program.
-         * @param c tlačítko, na které budu chtít kliknout.
-         */
-        private void clickOnSomeButtonWithRandomTimes(Character c){
-            if (Character.isUpperCase(c)) {
-                robot.keyPress(KeyEvent.VK_SHIFT);
-            }
-            robot.setAutoDelay(getDefinedRandomDelayBetween());
-            robot.keyPress(Character.toUpperCase(c));
-            robot.setAutoDelay(getDefinedRandomDelayBetween());
-            robot.keyRelease(Character.toUpperCase(c));
-            robot.setAutoDelay(getDefinedRandomDelayBetween());
-            if (Character.isUpperCase(c)) {
-                robot.keyRelease(KeyEvent.VK_SHIFT);
-            }
-        }
-
-        /**
-         *
-         * @return náhodný čas + ms time nastavený v input ms
-         */
-        private int getDefinedRandomDelay() {
-            return random.nextInt(1000) + timerTime;
-        }
-        private int getDefinedRandomDelay(Integer definedtimer) {
-            return random.nextInt(definedtimer) + timerTime;
-        }
-
-        /**
-         *
-         * @return náhodný čas na robot autoDelay.
-         */
-
-        private int getDefinedRandomDelayBetween() {
-            return random.nextInt(50) + 50;
-        }
-
-        /**
-         * Metoda provede náhodné pohnutí do stran, nebo stihnutí mezerníku. Tím způsobí, že charakter vypadne ze stavu AFK.
-         */
-        private void antiAfkMoveOnSide() {
-            logToConsole("Provádím antiAFK session");
-            switch (random.nextInt(4) + 1) {
-                case 1 -> {
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyPress(Character.toUpperCase("a".toCharArray()[0]));
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyRelease(Character.toUpperCase("a".toCharArray()[0]));
-                }
-                case 2 -> {
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyPress(Character.toUpperCase("w".toCharArray()[0]));
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyRelease(Character.toUpperCase("w".toCharArray()[0]));
-                }
-                case 3 -> {
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyPress(Character.toUpperCase("d".toCharArray()[0]));
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyRelease(Character.toUpperCase("d".toCharArray()[0]));
-                }
-                case 4 -> {
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyPress(KeyEvent.VK_SPACE);
-                    robot.setAutoDelay(getDefinedRandomDelayBetween());
-                    robot.keyRelease(KeyEvent.VK_SPACE);
-                }
-            }
-            sleeper(5000);
-        }
     }
-}
